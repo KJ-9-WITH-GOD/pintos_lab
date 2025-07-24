@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <syscall-nr.h>
 
+#include "include/filesys/file.h"
 #include "include/filesys/filesys.h"
 #include "intrinsic.h"
 #include "lib/kernel/console.h"
@@ -18,13 +19,6 @@ static bool check_bad_addr();
 static int write_handler(int fd, const void *buffer, unsigned size);
 static int close_handler(int fd);
 struct file *process_get_file(int fd);
-
-struct file_fd
-{
-    int fd;
-    struct file *file;
-    struct list_elem elem;
-};
 
 static int write_handler(int fd, const void *buffer, unsigned size);
 
@@ -75,6 +69,15 @@ void syscall_handler(struct intr_frame *f UNUSED)
             curr->tf.R.rax = f->R.rdi;
             thread_exit();
         }
+        case SYS_FORK:
+        {
+        }
+        case SYS_EXEC:
+        {
+        }
+        case SYS_WAIT:
+        {
+        }
         case SYS_CREATE:
         {
             const char *open_filename = (const char *) f->R.rdi;
@@ -92,6 +95,9 @@ void syscall_handler(struct intr_frame *f UNUSED)
                 f->R.rax = filesys_create(open_filename, filesize);
                 break;
             }
+        }
+        case SYS_REMOVE:
+        {
         }
         case SYS_OPEN:
         {
@@ -121,6 +127,15 @@ void syscall_handler(struct intr_frame *f UNUSED)
                 }
             }
         }
+        case SYS_FILESIZE:
+        {
+            struct file *current_file = process_get_file(f->R.rdi);
+            f->R.rax = file_length(current_file);
+            break;
+        }
+        case SYS_READ:
+        {
+        }
         case SYS_WRITE:
         {
             // 인터럽트 프레임(struct intr_frame *f)을 통해 사용자 프로그램의
@@ -130,6 +145,12 @@ void syscall_handler(struct intr_frame *f UNUSED)
             // f->R.rdx : 세 번째 인자 (size)
             f->R.rax = write_handler(f->R.rdi, f->R.rsi, f->R.rdx);
             break;
+        }
+        case SYS_SEEK:
+        {
+        }
+        case SYS_TELL:
+        {
         }
         case SYS_CLOSE:
         {
