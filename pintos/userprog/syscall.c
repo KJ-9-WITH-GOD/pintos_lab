@@ -135,6 +135,18 @@ void syscall_handler(struct intr_frame *f UNUSED)
         }
         case SYS_READ:
         {
+            struct thread *current_thread = thread_current();
+
+            if ((f->R.rdi < 2 || f->R.rdi > 127) ||
+                check_bad_addr(f->R.rsi, current_thread) == NULL)
+            {
+                current_thread->tf.R.rax = -1;
+                thread_exit();
+            }
+
+            struct file *current_file = process_get_file(f->R.rdi);
+            f->R.rax = file_read(current_file, f->R.rsi, f->R.rdx);
+            break;
         }
         case SYS_WRITE:
         {
