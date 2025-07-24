@@ -137,7 +137,7 @@ void syscall_handler(struct intr_frame *f UNUSED)
         {
             struct thread *current_thread = thread_current();
 
-            if ((f->R.rdi < 2 || f->R.rdi > 127) ||
+            if (!is_fd_readable(f->R.rdi) ||
                 check_bad_addr(f->R.rsi, current_thread) == NULL)
             {
                 current_thread->tf.R.rax = -1;
@@ -182,27 +182,32 @@ static bool check_bad_addr(const char *vaddr, struct thread *t)
 /* 파일 또는 STDOUT으로 쓰기 */
 static int write_handler(int fd, const void *buffer, unsigned size)
 {
-    // if (!is_user_vaddr(buffer) ||
-    //     (size > 0 && !is_user_vaddr(buffer + size - 1)))
-    // {
-    //     thread_exit();
+    struct thread *current_thread = thread_current();
 
-    // buffer를 fd에 쓰기
-    if (is_user_vaddr(buffer) && is_user_vaddr(buffer + size))
+    if (!is_fd_writable(fd) || check_bad_addr(buffer, current_thread) == NULL)
     {
-        if (fd == 1)  // fd가 1이면 표준 출력 (파일이 아니라 콘솔로 출력)
+        current_thread->tf.R.rax = -1;
+        thread_exit();
+    }
+
+    if (!(is_user_vaddr(buffer) && is_user_vaddr(buffer + size)))
+    {
+        return -1;
+    }
+
+    switch (fd)
+    {
+        case 1: /* fd가 1이면 표준 출력 (파일이 아니라 콘솔로 출력) */
         {
             putbuf(buffer, size);
         }
-        else if (fd > 2)  // open()으로 연 파일이 할당된 경우
+        default: /* open()으로 연 파일이 할당된 경우 */
         {
             struct file *file = process_get_file(fd);
             if (file == NULL) return -1;
             return file_write(file, buffer, size);
         }
     }
-
-    return -1;
 }
 
 static int close_handler(int fd)
