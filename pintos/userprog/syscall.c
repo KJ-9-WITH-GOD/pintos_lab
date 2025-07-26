@@ -5,6 +5,7 @@
 
 #include "include/filesys/file.h"
 #include "include/filesys/filesys.h"
+#include "include/userprog/process.h"
 #include "intrinsic.h"
 #include "lib/kernel/console.h"
 #include "threads/flags.h"
@@ -66,17 +67,23 @@ void syscall_handler(struct intr_frame *f UNUSED)
         case SYS_EXIT:
         {
             struct thread *curr = thread_current();
-            curr->tf.R.rax = f->R.rdi;
+            curr->exit_status = f->R.rdi;
             thread_exit();
         }
         case SYS_FORK:
         {
+            f->R.rax = process_fork(f->R.rdi, f);
+            break;
         }
         case SYS_EXEC:
         {
+            printf("exec syscall called!!!\n");
+            break;
         }
         case SYS_WAIT:
         {
+            f->R.rax = process_wait(f->R.rdi);
+            break;
         }
         case SYS_CREATE:
         {
@@ -98,6 +105,8 @@ void syscall_handler(struct intr_frame *f UNUSED)
         }
         case SYS_REMOVE:
         {
+            printf("remove syscall called!!!\n");
+            break;
         }
         case SYS_OPEN:
         {
@@ -160,9 +169,13 @@ void syscall_handler(struct intr_frame *f UNUSED)
         }
         case SYS_SEEK:
         {
+            printf("seek syscall called!!!\n");
+            break;
         }
         case SYS_TELL:
         {
+            printf("tell syscall called!!!\n");
+            break;
         }
         case SYS_CLOSE:
         {
@@ -219,14 +232,14 @@ static int close_handler(int fd)
         return -1;
     }
 
-    if (current_thread->file_descriptor_table[fd] == NULL)
+    if (current_thread->fdt[fd] == NULL)
     {
         return -1;
     }
     else
     {
-        current_thread->file_descriptor_table[fd] = NULL;
-        free(current_thread->file_descriptor_table[fd]);
+        current_thread->fdt[fd] = NULL;
+        free(current_thread->fdt[fd]);
         return 0;
     }
 }
@@ -237,10 +250,10 @@ struct file *process_get_file(int fd)
 {
     struct thread *current_thread = thread_current();
 
-    if (current_thread->file_descriptor_table[fd]->fd_type == FD_TYPE_FILE &&
-        current_thread->file_descriptor_table[fd]->fd_ptr != NULL)
+    if (current_thread->fdt[fd]->fd_type == FD_TYPE_FILE &&
+        current_thread->fdt[fd]->fd_ptr != NULL)
     {
-        return current_thread->file_descriptor_table[fd]->fd_ptr;
+        return current_thread->fdt[fd]->fd_ptr;
     }
     else
     {
@@ -258,13 +271,11 @@ int process_add_file(struct file *file)
 
     struct thread *current_thread = thread_current();
 
-    current_thread->file_descriptor_table[current_thread->next_fd] =
+    current_thread->fdt[current_thread->next_fd] =
         malloc(sizeof(struct uni_file));
 
-    current_thread->file_descriptor_table[current_thread->next_fd]->fd_type =
-        FD_TYPE_FILE;
-    current_thread->file_descriptor_table[current_thread->next_fd]->fd_ptr =
-        file;
+    current_thread->fdt[current_thread->next_fd]->fd_type = FD_TYPE_FILE;
+    current_thread->fdt[current_thread->next_fd]->fd_ptr = file;
 
     return current_thread->next_fd++;
 }
