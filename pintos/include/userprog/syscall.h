@@ -1,8 +1,8 @@
 #ifndef USERPROG_SYSCALL_H
 #define USERPROG_SYSCALL_H
 
+extern struct lock filesys_lock;
 void syscall_init(void);
-struct file *process_get_file(int fd);
-int process_add_file(struct file *file);
+void check_address(void *addr);
 
 #endif /* userprog/syscall.h */
